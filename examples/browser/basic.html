@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOMYO Secure Chat - Browser Example</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    .input-group {
+      margin: 20px 0;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #666;
+      font-weight: 500;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #0052a3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .response {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-left: 3px solid #0066cc;
+      border-radius: 4px;
+    }
+    .error {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fee;
+      border-left: 3px solid #c00;
+      border-radius: 4px;
+      color: #900;
+    }
+    .metadata {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+    .loading {
+      display: none;
+      margin-top: 10px;
+      color: #666;
+    }
+    .loading.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔒 NOMYO Secure Chat</h1>
+    <p>End-to-end encrypted chat using nomyo-js in the browser</p>
+
+    <div class="input-group">
+      <label for="server-url">Server URL</label>
+      <input type="text" id="server-url" value="https://api.nomyo.ai:12434" placeholder="https://api.nomyo.ai:12434">
+    </div>
+
+    <div class="input-group">
+      <label for="model">Model</label>
+      <input type="text" id="model" value="Qwen/Qwen3-0.6B" placeholder="Qwen/Qwen3-0.6B">
+    </div>
+
+    <div class="input-group">
+      <label for="message">Your Message</label>
+      <textarea id="message" placeholder="Type your message here...">Hello! How are you today?</textarea>
+    </div>
+
+    <button id="send-btn" onclick="sendMessage()">Send Message</button>
+    <div class="loading" id="loading">⏳ Encrypting and sending...</div>
+
+    <div id="response-container"></div>
+  </div>
+
+  <script type="module">
+    import { SecureChatCompletion } from '../../dist/browser/index.js';
+
+    let client = null;
+
+    window.sendMessage = async function() {
+      const serverUrl = document.getElementById('server-url').value;
+      const model = document.getElementById('model').value;
+      const message = document.getElementById('message').value;
+      const responseContainer = document.getElementById('response-container');
+      const sendBtn = document.getElementById('send-btn');
+      const loading = document.getElementById('loading');
+
+      // Clear previous response
+      responseContainer.innerHTML = '';
+      sendBtn.disabled = true;
+      loading.classList.add('active');
+
+      try {
+        // Initialize client
+        if (!client || client.baseUrl !== serverUrl) {
+          client = new SecureChatCompletion({
+            baseUrl: serverUrl,
+            allowHttp: serverUrl.startsWith('http://') // Allow HTTP for localhost
+          });
+        }
+
+        // Send request
+        const response = await client.create({
+          model: model,
+          messages: [
+            { role: 'user', content: message }
+          ],
+          temperature: 0.7
+        });
+
+        // Display response
+        const content = response.choices[0].message.content;
+        const metadata = response._metadata;
+        
+        responseContainer.innerHTML = `
+          <div class="response">
+            <strong>Response:</strong>
+            <p>${escapeHtml(content)}</p>
+            <div class="metadata">
+              🔐 Encrypted: ${metadata.is_encrypted}<br>
+              🔑 Algorithm: ${metadata.encryption_algorithm}<br>
+              📊 Tokens: ${response.usage?.total_tokens || 'N/A'}
+            </div>
+          </div>
+        `;
+
+      } catch (error) {
+        responseContainer.innerHTML = `
+          <div class="error">
+            <strong>Error:</strong>
+            <p>${escapeHtml(error.message)}</p>
+          </div>
+        `;
+      } finally {
+        sendBtn.disabled = false;
+        loading.classList.remove('active');
+      }
+    };
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initial message
+    console.log('NOMYO Secure Chat browser example loaded');
+    console.log('NOTE: Keys are generated in-memory and not persisted');
+  </script>
+</body>
+</html>

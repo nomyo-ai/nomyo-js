@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+*.tgz
+.DS_Store
+coverage/
+.nyc_output/
+build/
+*.node

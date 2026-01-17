@@ -1,0 +1,4 @@
+cd nomyo-js
+npm install      # Install dev dependencies
+npm run build    # Build Node.js + browser bundles
+npm test         # Run tests (when you create them)
